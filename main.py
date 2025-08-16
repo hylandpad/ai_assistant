@@ -1,5 +1,7 @@
 import os
+import sys
 from dotenv import load_dotenv
+
 
 load_dotenv()
 api_key = os.environ.get("GEMINI_API_KEY")
@@ -9,7 +11,8 @@ from google import genai
 client = genai.Client(api_key=api_key)
 
 def test_call():
-    response = client.models.generate_content(model='gemini-2.0-flash-001',contents='Why is Boot.dev such a great place to learn backend development? Use one paragraph maximum.')
+
+    response = client.models.generate_content(model='gemini-2.0-flash-001',contents=f"{sys.argv[1]}")
     
     response_text = f"{response.text}\n"
     candidates_tokens = f"Response tokens: {response.usage_metadata.candidates_token_count}\n"
@@ -20,7 +23,11 @@ def test_call():
 
 def main():
     print("Hello from ai-assistant!")
-    test_call()
+    if len(sys.argv) < 2:
+        print("No query provided, exiting program")
+        sys.exit(1)
+    else:
+        test_call()
 
 
 if __name__ == "__main__":
