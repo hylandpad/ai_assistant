@@ -37,7 +37,6 @@ def main():
         verbose = "--verbose" in sys.argv
         
         test_call(messages, verbose)
-
-
+        
 if __name__ == "__main__":
     main()
