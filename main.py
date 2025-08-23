@@ -1,6 +1,8 @@
 import os
 import sys
-import argparse
+import config
+import functions.schema as schema
+from functions.call_function import call_function
 from dotenv import load_dotenv
 from google.genai import types
 
@@ -11,11 +13,26 @@ from google import genai
 
 client = genai.Client(api_key=api_key)
 
-def test_call(messages, verbose=False):
+def make_request(messages, verbose=False):
 
-    response = client.models.generate_content(model='gemini-2.0-flash-001',contents=messages)
+    response_text = ""
     
-    response_text = f"{response.text}\n"
+    response = client.models.generate_content(
+        model='gemini-2.0-flash-001',
+        contents=messages,
+        config=types.GenerateContentConfig(tools=[schema.available_functions],system_instruction=config.SYSTEM_PROMPT),
+        )
+    
+    if response.function_calls:
+        function_call_result = call_function(response.function_calls[0], verbose)
+        if function_call_result.parts[0].function_response.response:
+            if verbose:
+                print(f"-> {function_call_result.parts[0].function_response.response}")
+        else:
+            raise Exception("Function call failed - no response")
+    else:
+        response_text = f"{response.text}\n"
+
     user_prompt = f"User prompt: {sys.argv[1]}\n"
     candidates_tokens = f"Response tokens: {response.usage_metadata.candidates_token_count}\n"
     prompt_tokens = f"Prompt tokens: {response.usage_metadata.prompt_token_count}\n"
@@ -31,12 +48,12 @@ def main():
         print("No query provided, exiting program")
         sys.exit(1)
     else:
-        user_prompt = " ".join(sys.argv[1])
-
-        messages = [types.Content(role="user", parts=[types.Part(text=user_prompt)])]
         verbose = "--verbose" in sys.argv
+        args = [arg for arg in sys.argv[1:] if not arg.startswith("--") ]
+        user_prompt = " ".join(args)
+        messages = [types.Content(role="user", parts=[types.Part(text=user_prompt)])]
         
-        test_call(messages, verbose)
+        make_request(messages, verbose)
         
 if __name__ == "__main__":
     main()
